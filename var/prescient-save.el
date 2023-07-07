@@ -1,0 +1,2 @@
+
+(funcall prescient-cache-callback :version '5 :history '#s(hash-table size 65 test equal rehash-size 1.5 rehash-threshold 0.8125 data ("manifold" 3 "yas-new-snippet" 2 "counsel-recentf" 1 "kolar" 0)) :frequency '#s(hash-table size 65 test equal rehash-size 1.5 rehash-threshold 0.8125 data ("manifold" 0.988053892081 "yas-new-snippet" 0.991026973 "counsel-recentf" 0.994009 "kolar" 0.997)) :serial-number '4)

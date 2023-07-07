@@ -1,0 +1,540 @@
+;;; Fix garbage collection ;;;
+
+;; The default is 800 kilobytes.  Measured in bytes.
+; (setq gc-cons-threshold (* 50 1000 1000))
+
+;;;; Visual Configuration ;;;;
+
+(setq inhibit-startup-message t)
+
+; (desktop-save-mode 1)
+(scroll-bar-mode -1)        ; Disable visible scrollbar
+(tool-bar-mode -1)          ; Disable the toolbar
+(tooltip-mode -1)           ; Disable tooltips
+(set-fringe-mode 10)        ; Give some breathing room
+
+(menu-bar-mode -1)         ; Disable the menu bar
+
+;(setq visible-bell 0)
+
+;; Start from where you left (why isn't this default?)
+(save-place-mode)
+
+;; Electric pair
+(electric-pair-mode 1)
+; (setq electric-pair-pairs '( (?\" . ?\") (?{ . ?}) (?( . ?)) (?[ . ?])))
+(setq electric-pair-preserve-balance nil)
+
+;; Line numbers
+(column-number-mode)
+(global-display-line-numbers-mode t)
+
+;; Company mode 
+(add-hook 'after-init-hook 'global-company-mode)
+; (company-auctex-init)
+;; So that RefTeX also recognizes \addbibresource. Note that you
+;; can't use $HOME in path for \addbibresource but that "~"
+;; works.
+(setq reftex-bibliography-commands '("bibliography" "nobibliography" "addbibresource"))
+
+; Disable line numbers for some modes
+(dolist (mode '(org-mode-hook
+                term-mode-hook
+                shell-mode-hook
+                treemacs-mode-hook
+                eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+;; Fonts ;;
+(set-face-attribute 'default nil :family "FiraCode Nerd Font" :height 130)
+
+;; Required by dashboard
+(global-page-break-lines-mode t)
+
+; (load-theme 'wombat)
+
+; (add-to-list 'custom-theme-load-path "~/.emacs.d/themes/")
+; (load-theme 'kanagawa t)
+
+;; Make ESC quit prompts
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+;; Fancy word wrapping at 80 characters
+
+(add-hook 'text-mode-hook #'auto-fill-mode)
+(setq-default fill-column 80)
+
+;; Global mode snippets ;;
+(yas-global-mode 1)
+(add-hook 'yas-minor-mode-hook (lambda ()
+                                 (yas-activate-extra-mode 'fundamental-mode)))
+
+;; Global mode smartparens ;;
+(smartparens-global-mode 1)
+; (add-hook 'latex-mode-hook #'smartparens-mode)
+
+;; Projectile. To be experimented on later
+(projectile-mode +1)
+;; Recommended keymap prefix on macOS
+; (define-key projectile-mode-map (kbd "s-p") 'projectile-command-map)
+;; Recommended keymap prefix on Windows/Linux
+; (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+
+;;;; Packages ;;;;
+
+;; Initialize package sources
+(require 'package)
+
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")))
+
+(package-initialize)
+(unless package-archive-contents
+ (package-refresh-contents))
+
+;; Initialize use-package on non-Linux platforms
+(unless (package-installed-p 'use-package)
+   (package-install 'use-package))
+
+(require 'use-package)
+(setq use-package-always-ensure t)
+
+;; Garbage collection 
+(use-package gcmh
+  :diminish gcmh-mode
+  :config
+  (setq gcmh-idle-delay 5
+        gcmh-high-cons-threshold (* 16 1024 1024))  ; 16mb
+  (gcmh-mode 1))
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-percentage 0.1))) ;; Default value for `gc-cons-percentage'
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs ready in %s with %d garbage collections."
+                     (format "%.2f seconds"
+                             (float-time
+                              (time-subtract after-init-time before-init-time)))
+                     gcs-done)))
+
+;; 何だこれ
+;; later you setup a keybinding to switch mozc-mode on and off
+(use-package mozc)
+
+;; Fancy dashboard
+
+(use-package dashboard
+  :ensure t
+  :after all-the-icons
+  :init
+  (progn
+    (setq dashboard-set-file-icons t)
+    (setq dashboard-set-heading-icons t)
+    )
+  :config
+  (dashboard-setup-startup-hook)
+  (setq dashboard-startup-banner "~/.emacs.d/liyuu_meme_1-min.png")
+  (setq dashboard-banner-logo-title "あれ？")
+  (setq dashboard-center-content t)
+  (setq dashboard-footer-messages '("「好きなものは好き！」"))
+)
+
+;; ivy
+
+(use-package ivy
+  :diminish
+;  :demand
+  :bind (("C-s" . swiper)
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)	
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
+  :config
+  (ivy-mode 1))
+
+;; Counsel
+(use-package counsel
+  :bind (("C-M-j" . 'counsel-switch-buffer)
+         :map minibuffer-local-map
+         ("C-r" . 'counsel-minibuffer-history)
+	 ("C-x C-f" . 'counsel-find-file)
+	 ("C-x b" . 'counsel-ibuffer))
+  :custom
+  (counsel-linux-app-format-function #'counsel-linux-app-format-function-name-only)
+  :config
+  (counsel-mode 1))
+
+;; Prescient
+(use-package prescient
+  :config
+  (setq-default history-length 1000)
+  (setq-default prescient-history-length 1000)
+  (prescient-persist-mode 1))
+
+;; ivy-prescient
+(use-package ivy-prescient
+  :after ivy
+  :config
+  (ivy-prescient-mode 1))
+
+;; Ivy rich
+(use-package ivy-rich
+  :after ivy
+  :init
+  (ivy-rich-mode 1))
+
+;; Nice icons in Ivy. Replaces all-the-icons-ivy.
+(use-package all-the-icons-ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1)
+  :config
+  (setq all-the-icons-ivy-rich-icon-size 1.0))
+
+;; Fancy looks
+ (use-package doom-themes
+   :init (load-theme 'doom-tokyo-night t))
+
+;; Fancy bar
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1)
+  :custom ((doom-modeline-height 15)))
+
+;; Rainbow delimiters
+(use-package rainbow-delimiters
+  :hook (prog-mode . rainbow-delimiters-mode))
+
+;; All the icons
+(use-package all-the-icons)
+
+;; Which key
+(use-package which-key
+  :defer 0
+  :diminish which-key-mode
+  :config
+  (which-key-mode)
+  (setq which-key-idle-delay 0.2))
+
+;;;; LaTeX ;;;;
+
+;; Copied from https://karthinks.com/software/latex-input-for-impatient-scholars ;;
+
+;; AucTeX settings - almost no changes
+(use-package latex
+  :ensure auctex
+  :hook ((LaTeX-mode . prettify-symbols-mode))
+  :bind (:map LaTeX-mode-map
+         ("C-S-e" . latex-math-from-calc))
+  :config
+  ;; Format math as a Latex string with Calc
+  (defun latex-math-from-calc ()
+    "Evaluate `calc' on the contents of line at point."
+    (interactive)
+    (cond ((region-active-p)
+           (let* ((beg (region-beginning))
+                  (end (region-end))
+                  (string (buffer-substring-no-properties beg end)))
+             (kill-region beg end)
+             (insert (calc-eval `(,string calc-language latex
+                                          calc-prefer-frac t
+                                          calc-angle-mode rad)))))
+          (t (let ((l (thing-at-point 'line)))
+               (end-of-line 1) (kill-line 0) 
+               (insert (calc-eval `(,l
+                                    calc-language latex
+                                    calc-prefer-frac t
+                                    calc-angle-mode rad))))))))
+;; Larger previews
+(set-default 'preview-scale-function 1.5)
+
+;; CDLatex settings
+(use-package cdlatex
+  :ensure t
+  :hook (LaTeX-mode . turn-on-cdlatex)
+  :bind (:map cdlatex-mode-map 
+              ("<tab>" . cdlatex-tab)))
+
+;; Yasnippet settings
+(use-package yasnippet
+  :ensure t
+  :hook ((LaTeX-mode . yas-minor-mode)
+         (post-self-insert . my/yas-try-expanding-auto-snippets))
+  :config
+  (use-package warnings
+    :config
+    (cl-pushnew '(yasnippet backquote-change)
+                warning-suppress-types
+                :test 'equal))
+
+  (setq yas-triggers-in-field t)
+  
+  ;; Function that tries to autoexpand YaSnippets
+  ;; The double quoting is NOT a typo!
+  (defun my/yas-try-expanding-auto-snippets ()
+    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
+      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
+        (yas-expand)))))
+
+;; CDLatex integration with YaSnippet: Allow cdlatex tab to work inside Yas
+;; fields
+(use-package cdlatex
+  :hook ((cdlatex-tab . yas-expand)
+         (cdlatex-tab . cdlatex-in-yas-field))
+  :config
+  (use-package yasnippet
+    :bind (:map yas-keymap
+           ("<tab>" . yas-next-field-or-cdlatex)
+           ("TAB" . yas-next-field-or-cdlatex))
+    :config
+    (defun cdlatex-in-yas-field ()
+      ;; Check if we're at the end of the Yas field
+      (when-let* ((_ (overlayp yas--active-field-overlay))
+                  (end (overlay-end yas--active-field-overlay)))
+        (if (>= (point) end)
+            ;; Call yas-next-field if cdlatex can't expand here
+            (let ((s (thing-at-point 'sexp)))
+              (unless (and s (assoc (substring-no-properties s)
+                                    cdlatex-command-alist-comb))
+                (yas-next-field-or-maybe-expand)
+                t))
+          ;; otherwise expand and jump to the correct location
+          (let (cdlatex-tab-hook minp)
+            (setq minp
+                  (min (save-excursion (cdlatex-tab)
+                                       (point))
+                       (overlay-end yas--active-field-overlay)))
+            (goto-char minp) t))))
+
+    (defun yas-next-field-or-cdlatex nil
+      (interactive)
+      "Jump to the next Yas field correctly with cdlatex active."
+      (if
+          (or (bound-and-true-p cdlatex-mode)
+              (bound-and-true-p org-cdlatex-mode))
+          (cdlatex-tab)
+        (yas-next-field-or-maybe-expand)))))
+
+;; Company auctex (stolen partially from https://emacs.stackexchange.com/questions/61065/cant-get-company-reftex-labels-to-work-properly)
+; (use-package company-auctex)
+; (use-package company-reftex)
+
+(add-hook 'LaTeX-mode-hook #'reftex-mode)
+(add-hook 'latex-mode-hook #'reftex-mode)
+
+(defun sb/company-latex-mode ()
+  "Add backends for latex completion in company mode."
+  (use-package math-symbol-lists ; Required by ac-math and company-math
+    :ensure t)
+  (use-package company-math
+    :ensure t)
+  (use-package company-reftex
+    :ensure t)
+  (use-package company-bibtex
+    :ensure t)
+  (make-local-variable 'company-backends)
+  (setq company-backends
+        '((
+           company-capf
+           ;; company-tabnine
+           company-bibtex
+           company-math-symbols-latex
+           company-latex-commands
+           company-math-symbols-unicode
+           company-reftex-labels
+           company-reftex-citations
+           company-yasnippet
+           company-files
+           company-ispell
+           company-dabbrev
+           ))))
+(dolist (hook '(latex-mode-hook LaTeX-mode-hook))
+  (add-hook hook #'sb/company-latex-mode))
+
+;;;; End of LaTeX Configuration ;;;;;
+
+;; Here starts some miscellaneous configuration
+
+;; Smartparens
+(use-package smartparens)
+
+;;;; More Auctex and snippets config ;;;;
+
+;; Auctex mainfiles
+(setq-default TeX-master nil)
+
+;; Auctex config
+; (setq TeX-electric-sub-and-superscript nil)
+
+;; nested snippets
+(setq yas-triggers-in-field t)
+
+(setq lsp-tex-server 'digestif)
+
+;;; Auto-trigger snippets ;;;
+
+(use-package aas
+  :hook (LaTeX-mode . aas-activate-for-major-mode)
+  :hook (org-mode . aas-activate-for-major-mode)
+  :config
+  (aas-set-snippets 'text-mode
+    ;; expand unconditionally
+    ";o-" "ō"
+    ";i-" "ī"
+    ";a-" "ā"
+    ";u-" "ū"
+    ";e-" "ē")
+  (aas-set-snippets 'latex-mode
+    ;; set condition!
+    :cond #'texmathp ; expand only while in math
+    "supp" "\\supp"
+    "RR" "\\mathbb{R}"
+    "Rn" "\\mathbb{R}^n"
+    "Rm" "\\mathbb{R}^m"
+    "to" "\\to"
+    "\>" "\\mapsto"
+    ;; For yas style
+    "cinf" '(yas "\\mathscr{C}^{\\infty}($1)$0")
+    "//"  '(yas "\\frac{$1}{$2}$0")
+;    "set" '(yas "\{$1 \ |\ $2\}$0")
+;    "dm" '(yas "\\[$1 \\]$0")
+    ;; Use YAS/Tempel snippets with ease!
+    "amin" '(yas "\\argmin_{$1}") ; YASnippet snippet shorthand form
+    "amax" '(tempel "\\argmax_{" p "}") ; Tempel snippet shorthand form
+    ;; bind to functions!
+    ";ig" #'insert-register
+    ";call-sin"
+    (lambda (angle) ; Get as fancy as you like
+      (interactive "sAngle: ")
+      (insert (format "%s" (sin (string-to-number angle))))))
+  ;; disable snippets by redefining them with a nil expansion
+  (aas-set-snippets 'latex-mode
+    "supp" nil))
+
+;;; Aesthetics
+(setq
+ TeX-fold-math-spec-list
+ `( ;; missing symbols
+   ("≤" ("le"))
+   ("≥" ("ge"))
+   ("≠" ("ne"))
+   ("‘{1}’" ("text"))
+   ;; conviniance shorts
+   ("‹" ("left"))
+   ("›" ("right"))
+   ("¡{1}" ("mathclap"))
+   ("👻{1}" ("phantom"))
+   ("⟋{1}" ("cancel"))
+   ("␣" ("textvisiblespace"))
+   ;; private macros
+   ("ℝ" ("RR"))
+   ("𝔼" ("EX"))
+   ("ℕ" ("NN"))
+   ("Nₑ" ("NE"))
+   ("Nₒ" ("NO"))
+
+   ("ℚ" ("QQ"))
+   ("ℤ" ("ZZ"))
+   ("ℂ" ("CC"))
+   ("𝔽" ("FF"))
+   ("𝓣" ("TT"))
+   ("ℝ→ℝ" ("rtr"))
+   ("I→ℝ" ("itr"))
+   ("½" ("halff"))
+   ("({1})" ("pa"))
+   ("({1}]" ("pba"))
+   ("[{1})" ("bpa"))
+   ("[{1}]" ("bra"))
+   ;; ("|{1}|" ("abs")) ; collides with the auto snippets and kicks me out
+   ("❴{1}❵" ("bre" "set")) ; explicitly using bold unicode braces
+   ("⌊{1}⌋" ("floor"))
+   ("⌈{1}⌉" ("ceil"))
+   ("‖{1}‖" ("norm"))
+   ("❬{1}❭" ("anb")) ; explititly using narrower unicode angle brackets
+
+   ;; fancification
+   ("{1}" ("mathrm"))
+   (,(lambda (word) (string-offset-roman-chars 119743 word)) ("mathbf"))
+   (,(lambda (word) (string-offset-roman-chars 119951 word)) ("mathcal"))
+   (,(lambda (word) (string-offset-roman-chars 120003 word)) ("mathfrak"))
+   (,(lambda (word) (string-offset-roman-chars 120055 word)) ("mathbb"))
+   (,(lambda (word) (string-offset-roman-chars 120159 word)) ("mathsf"))
+   (,(lambda (word) (string-offset-roman-chars 120367 word)) ("mathtt"))
+   )
+ TeX-fold-macro-spec-list ; thanks to @tecosaur
+ '( ;; as the defaults
+   ("[f]" ("footnote" "marginpar"))
+   ("[c]" ("cite"))
+   ("[l]" ("label"))
+   ("[r]" ("ref" "pageref" "eqref"))
+   ("[i]" ("index" "glossary"))
+   ("..." ("dots"))
+   ("{1}" ("emph" "textit" "textsl" "textmd" "textrm" "textsf" "texttt"
+           "textbf" "textsc" "textup"))
+   ;; tweaked defaults
+   ("©" ("copyright"))
+   ("®" ("textregistered"))
+   ("™"  ("texttrademark"))
+   ("[1]:||•" ("item"))
+   ("❡ {1}" ("chapter" "chapter*"))
+   ("❡❡ {1}" ("part" "part*"))
+   ("§ {1}" ("section" "section*"))
+   ("§§ {1}" ("subsection" "subsection*"))
+   ("§§§ {1}" ("subsubsection" "subsubsection*"))
+   ("¶ {1}" ("paragraph" "paragraph*"))
+   ("¶¶ {1}" ("subparagraph" "subparagraph*"))
+   ))
+
+;; Making \( \) less visible
+(defface unimportant-latex-face
+  '((t
+     :inherit font-lock-comment-face))
+  "Face used to make \\(\\), \\=\\[\\] less visible."
+  :group 'LaTeX-math)
+
+(font-lock-add-keywords
+ 'latex-mode
+ `((,(rx "\\" (any "()[]")) 0 'unimportant-latex-face prepend))
+ 'end)
+
+;; Completion
+
+
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(TeX-source-correlate-method 'synctex)
+ '(TeX-source-correlate-mode t)
+ '(TeX-source-correlate-start-server t)
+ '(custom-safe-themes
+   '("02f57ef0a20b7f61adce51445b68b2a7e832648ce2e7efb19d217b6454c1b644" "aec7b55f2a13307a55517fdf08438863d694550565dee23181d2ebd973ebd6b8" "1a1ac598737d0fcdc4dfab3af3d6f46ab2d5048b8e72bc22f50271fd6d393a00" "79c0825c083550af2c81ba4becc1103f6701a5ef93883a2cb860b250793b638a" "570263442ce6735821600ec74a9b032bc5512ed4539faf61168f2fdf747e0668" "00cec71d41047ebabeb310a325c365d5bc4b7fab0a681a2a108d32fb161b4006" "7ea883b13485f175d3075c72fceab701b5bf76b2076f024da50dff4107d0db25" "da75eceab6bea9298e04ce5b4b07349f8c02da305734f7c0c8c6af7b5eaa9738" "944d52450c57b7cbba08f9b3d08095eb7a5541b0ecfb3a0a9ecd4a18f3c28948" "2f8eadc12bf60b581674a41ddc319a40ed373dd4a7c577933acaff15d2bf7cc6" "2e05569868dc11a52b08926b4c1a27da77580daa9321773d92822f7a639956ce" "631c52620e2953e744f2b56d102eae503017047fb43d65ce028e88ef5846ea3b" "2dd4951e967990396142ec54d376cced3f135810b2b69920e77103e0bcedfba9" "b99e334a4019a2caa71e1d6445fc346c6f074a05fcbb989800ecbe54474ae1b0" "e3daa8f18440301f3e54f2093fe15f4fe951986a8628e98dcd781efbec7a46f2" "680f62b751481cc5b5b44aeab824e5683cf13792c006aeba1c25ce2d89826426" "7a424478cb77a96af2c0f50cfb4e2a88647b3ccca225f8c650ed45b7f50d9525" "60ada0ff6b91687f1a04cc17ad04119e59a7542644c7c59fc135909499400ab8" default))
+ '(package-selected-packages
+   '(ivy-prescient prescient company-bibtex company-math math-symbol-lists company-reftex company-auctex mozc general all-the-icons-ivy-rich kind-icon cape gcmh corfu lsp-ivy lsp-treemacs lsp-ui lsp-mode dashboard projectile page-break-lines smartparens aas yasnippet doom-themes counsel ivy-rich rainbow-delimiters which-key all-the-icons cdlatex preview-dvisvgm preview use-package ivy doom-modeline command-log-mode auctex))
+ '(safe-local-variable-values nil))
+;(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ ;)
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
+;; Make gc pauses faster by decreasing the threshold.
+(setq gc-cons-threshold (* 2 1000 1000))

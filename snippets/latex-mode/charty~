@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: charty
+# key: Vy
+# condition: (and (texmathp) 'auto)
+# group: math
+# --
+(V,\y)

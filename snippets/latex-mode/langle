@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: langle rangle
+# key: lang
+# group: math	
+# --
+\\left\\langle $1,$2 \\right\\rangle$0

@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: chartx
+# key: Ux
+# condition: (and (texmathp) 'auto)
+# group: math
+# --
+(U,\x)
